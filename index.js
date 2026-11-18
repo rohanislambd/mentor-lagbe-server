@@ -14,7 +14,8 @@ app.use(express.json());
 // Auth Middleware
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-
+ 
+ 
   if (!authHeader) {
     return res.status(401).send({success: false, message: "Unauthorized access" });
   }
@@ -25,7 +26,7 @@ const verifyToken = async (req, res, next) => {
   }
 
   const JWKS = createRemoteJWKSet(
-    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
   );
 
   try {
@@ -75,42 +76,58 @@ app.get("/", (req, res) => {
   res.send({ success: true, message: "mentor-lab backend is running" });
 });
 
-// tuitions releted api
+// tuitions related api
 app.post("/tuitions", verifyToken, verifyTutor, async (req, res) => {
-  const tuition = req.body;
-  const userPlan = req.user.plan || "free";
+    const tuition = req.body;
+    const userPlan = req.user.plan || "free";
 
-  if(userPlan === "free"){
-    const tuitionCount = await tuitionsCollection.countDocuments({
-        tutorEmail: req.user.email
-    });
-    if(tuitionCount => 2){
-        return res.status(403).send({
-        success: false,
-        message: "Free plan limit reached (Max 2 tuitions). Upgrade to Pro!",
-        })
+    if (userPlan === "free") {
+        const tuitionCount = await tuitionsCollection.countDocuments({
+            tutorEmail: req.user.email
+        });
+
+        if (tuitionCount >= 2) {
+            return res.status(403).send({
+                success: false,
+                message: "Free plan limit reached (Max 2 tuitions). Upgrade to Pro!",
+            });
+        }
     }
-  }
 
-  const existingTuition = await tuitionsCollection.findOne({
-    title: tuition.title,
-    tutorEmail: req.user.email,
-  });
-
-  if (existingTuition) {
-    return res.status(409).json({
-      success: false,
-      message: "This tuition already exists!",
+    const existingTuition = await tuitionsCollection.findOne({
+        title: tuition.title,
+        tutorEmail: req.user.email,
     });
-  }
 
-  const result = await tuitionsCollection.insertOne(tuition);
+    if (existingTuition) {
+        return res.status(409).json({
+            success: false,
+            message: "This tuition already exists!",
+        });
+    }
 
-  res.status(201).json({
-    success: true,
-    message: "Tuition created successfully!",
-    result,
-  });
+    const result = await tuitionsCollection.insertOne({
+        ...tuition,
+        createdAt: new Date(),
+    });
+
+    res.status(201).json({
+        success: true,
+        message: "Tuition created successfully!",
+        result,
+    });
+});
+
+
+// tutor get api
+
+
+app.get("/tuitions/my-tuitions", verifyToken, verifyTutor, async (req, res) => {
+  const result = await tuitionsCollection
+    .find({ tutorEmail: req.user.email })
+    .sort({ createdAt: -1 })
+    .toArray();
+  res.send(result);
 });
 
 app.listen(PORT, () => {
