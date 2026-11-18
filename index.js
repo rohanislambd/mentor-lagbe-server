@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config'
 import { MongoClient } from 'mongodb';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -9,6 +10,34 @@ const PORT = process.env.PORT || 5000;
 // middleware  
 app.use(cors());
 app.use(express.json());
+
+// Auth Middleware
+const verifyToken = async(req, res, next) =>{
+    const authHeader = req.headers.authorization;
+     if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+
+  const JWKS = createRemoteJWKSet(
+    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+  );
+
+
+  try{
+    const {payload } = await jwtVerify(token, JWKS)
+    req.user = payload;
+    next()
+  }catch{
+    return res.status(401).send({
+      message: "Unauthorized access",
+    });
+  }
+}
 
 //mongodb database
 
