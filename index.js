@@ -66,6 +66,18 @@ const verifyAdmin = async (req, res, next) => {
   next();
 };
 
+// verifyStudent
+const verifyStudent = async (req, res, next) => {
+  const role = req.user.role;
+  if (role !== "student") {
+    return res.status(403).json({
+      success: false,
+      message: "Only students are allowed to perform this action.",
+    });
+  }
+  next();
+};
+
 //mongodb database
 
 const client = new MongoClient(process.env.MONGODB_URI);
@@ -197,7 +209,67 @@ app.patch("/alltuitions/:id/approve", verifyToken, verifyAdmin, async (req, res)
   res.send(result);
 });
 
+
+
+// publice browse tuitions api ---> server side search, filter, pagination
+app.get("/tuitions", async (req, res) => {
+  const query = {
+    approvalStatus: "approved",
+    isActive: true,
+  }
+  if(req.query.subject){
+    query.subject = {
+      $regex: req.query.subject,
+      $options: "i"
+    };
+  }
+
+  if(req.query.classLevel){
+    query.classLevel = {
+      $regex: req.query.classLevel,
+      $options: "i"
+    }
+  }
+    if (req.query.mode) {
+    query.mode = {
+      $regex: `^${req.query.mode}$`,
+      $options: "i",
+    };
+  }
+  if(req.query.tutorName){
+    query.tutorName = {
+      $regex: req.query.tutorName,
+      $options: "i"
+    }
+  }
+
+  //Search filter (Title or subject)
+
+  if(req.query.search){
+    query.$or=[
+      {title: {$regex: req.query.search, $options: "i"}},
+      {subject: {$regex: req.query.search, $options: "i"}}, 
+      {tutorName: {$regex: req.query.search, $options: "i"}}
+    ]
+  }
+
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 6;
+  const skip = (page - 1) * limit;
+
+  const total = await tuitionsCollection.countDocuments(query);
+  const result = await tuitionsCollection.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
+  res.send({
+    result,
+    total,
+    totalPages: Math.ceil(total / limit),
+  });
+})
+
+
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-``;
