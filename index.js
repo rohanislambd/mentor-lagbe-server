@@ -136,6 +136,20 @@ app.get("/tuitions/my-tuitions", verifyToken, verifyTutor, async (req, res) => {
      res.send(result)
  })
 
+ // Tutor patch api
+app.patch("/tuitions/:id",verifyToken,verifyTutor, async(req, res) => {
+  const id = req.params.id;
+  const updateTuition = req.body;
+  delete updateTuition._id;
+
+  const result = await tuitionsCollection.updateOne(
+    {_id: new ObjectId(id), tutorEmail: req.user.email},
+    { $set: updateTuition }
+  )
+  res.send(result)
+})
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
