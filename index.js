@@ -41,12 +41,26 @@ const verifyToken = async (req, res, next) => {
   }
 };
 //must call this middleware after veriifyToken
+// verifyTutor
 const verifyTutor = async (req, res, next) => {
+
   const role = req.user.role;
   if (role !== "tutor") {
     return res.status(403).json({
       success: false,
       message: "Only tutors are allowed to perform this action.",
+    });
+  }
+  next();
+};
+
+// verifyAdmin
+const verifyAdmin = async (req, res, next) => {
+  const role = req.user.role;
+  if (role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Only admins are allowed to perform this action.",
     });
   }
   next();
@@ -159,6 +173,29 @@ app.delete("/tuitions/:id",verifyToken, verifyTutor,  async(req,res) => {
   })
   res.send(result)
 })
+
+
+//
+// Admin api to get all tuitions
+app.get("/admin/tuitions", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await tuitionsCollection
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+  res.send(result);
+});
+
+//  Tuition approvalStatus approve admin api
+app.patch("/alltuitions/:id/approve", verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+  const { approvalStatus } = req.body;
+  // console.log(approvalStatus);
+  const result = await tuitionsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { approvalStatus } }
+  );
+  res.send(result);
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
