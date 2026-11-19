@@ -136,7 +136,7 @@ app.get("/tuitions/my-tuitions", verifyToken, verifyTutor, async (req, res) => {
      res.send(result)
  })
 
- // Tutor patch api
+ // Tuition patch api
 app.patch("/tuitions/:id",verifyToken,verifyTutor, async(req, res) => {
   const id = req.params.id;
   const updateTuition = req.body;
@@ -150,6 +150,15 @@ app.patch("/tuitions/:id",verifyToken,verifyTutor, async(req, res) => {
 })
 
 
+// Tuition delete api
+app.delete("/tuitions/:id",verifyToken, verifyTutor,  async(req,res) => {
+  const id = req.params.id;
+  const result = await tuitionsCollection.deleteOne({
+    _id: new ObjectId(id),
+    tutorEmail: req.user.email
+  })
+  res.send(result)
+})
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
