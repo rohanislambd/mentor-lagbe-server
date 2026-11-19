@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 const app = express();
@@ -120,8 +120,6 @@ app.post("/tuitions", verifyToken, verifyTutor, async (req, res) => {
 
 
 // tutor get api
-
-
 app.get("/tuitions/my-tuitions", verifyToken, verifyTutor, async (req, res) => {
   const result = await tuitionsCollection
     .find({ tutorEmail: req.user.email })
@@ -129,6 +127,15 @@ app.get("/tuitions/my-tuitions", verifyToken, verifyTutor, async (req, res) => {
     .toArray();
   res.send(result);
 });
+
+ // Single Tuition Details
+ app.get("/tuitions/:id", async(req, res) => {
+     const id = req.params.id
+     const query = {_id: new ObjectId(id)};
+     const result = await tuitionsCollection.findOne(query)
+     res.send(result)
+ })
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
