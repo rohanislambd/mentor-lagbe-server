@@ -361,6 +361,32 @@ app.delete("/applications/:id", verifyToken, verifyStudent, async (req, res) => 
 }); 
 
 
+// user related api
+// all users get api for admin
+app.get("/admin/users", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await usersCollection.find({}).toArray();
+  res.send(result);
+});
+
+// user role update api for admin
+app.patch("/admin/users/:id/role", verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+   
+  const query = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: {
+      role: req.body.role,
+    },
+  };
+  const result = await usersCollection.updateOne(query, updateDoc);
+  res.send(result);
+})
+
+
+// get logged in user info
+app.get("/users/me", verifyToken, async (req, res) => {
+  res.send(req.user);
+})
 
 
 app.listen(PORT, () => {
