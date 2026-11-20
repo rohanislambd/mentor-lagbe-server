@@ -268,6 +268,53 @@ app.get("/tuitions", async (req, res) => {
 })
 
 
+//studen application post api
+app.post("/applications", verifyToken, verifyStudent, async (req, res) => {
+  const applicationData = req.body;
+
+     const existing = await applicationsCollection.findOne({
+    tuitionId: applicationData.tuitionId,
+    studentEmail: req.user.email,
+  });
+ 
+  
+  if (existing) {
+    return res.status(400).send({
+      success: false,
+      message: "You have already applied for this tuition!",
+    });
+  }
+
+  const applications = {
+    ...applicationData,
+    appiedAt: new Date(),
+  }
+   const result = await applicationsCollection.insertOne(applications);
+   res.send(result)
+}); 
+
+// Student & Tutor Applications View
+app.get("/applications", verifyToken, async (req, res) => {
+  const query = {};
+  if (req.user.role === "student") {
+    query.studentEmail = req.user.email;
+  } else if (req.user.role === "tutor") {
+    query.tutorEmail = req.user.email;
+  }
+  const result = await applicationsCollection.find(query).sort({ appiedAt: -1 }).toArray();
+  res.send(result);
+});
+
+// Student my-applications API
+app.get("/applications/my-applications", verifyToken, async (req, res) => {
+  const result = await applicationsCollection
+    .find({ studentEmail: req.user.email })
+    .sort({ appiedAt: -1 })
+    .toArray();
+  res.send(result);
+}); 
+
+
 
 
 app.listen(PORT, () => {
