@@ -267,7 +267,42 @@ app.get("/tuitions", async (req, res) => {
   });
 })
 
+// tutor application accept or reject
+app.patch("/applications/:id", verifyToken, verifyTutor, async (req, res) => {
+  const id = req.params.id;
 
+  const existing = await applicationsCollection.findOne({
+    _id: new ObjectId(id),
+    tutorEmail: req.user.email,
+  });
+
+  if (!existing) {
+    return res.status(404).send({ success: false, message: "Application not found" });
+  }
+
+  if (existing.status !== "pending") {
+    return res.status(400).send({
+      success: false,
+      message: `This application has already been ${existing.status} and cannot be modified again.`,
+    });
+  }
+
+  const query = {
+    _id: new ObjectId(id),
+    tutorEmail: req.user.email,
+    status: "pending",
+  };
+  const updateDoc = {
+    $set: {
+      status: req.body.status,
+    },
+  };
+  const result = await applicationsCollection.updateOne(query, updateDoc);
+  res.send(result);
+});
+
+
+// student related api
 //studen application post api
 app.post("/applications", verifyToken, verifyStudent, async (req, res) => {
   const applicationData = req.body;
@@ -287,7 +322,7 @@ app.post("/applications", verifyToken, verifyStudent, async (req, res) => {
 
   const applications = {
     ...applicationData,
-    appiedAt: new Date(),
+    appliedAt: new Date(),
   }
    const result = await applicationsCollection.insertOne(applications);
    res.send(result)
@@ -301,7 +336,7 @@ app.get("/applications", verifyToken, async (req, res) => {
   } else if (req.user.role === "tutor") {
     query.tutorEmail = req.user.email;
   }
-  const result = await applicationsCollection.find(query).sort({ appiedAt: -1 }).toArray();
+  const result = await applicationsCollection.find(query).sort({ appliedAt: -1 }).toArray();
   res.send(result);
 });
 
@@ -309,8 +344,19 @@ app.get("/applications", verifyToken, async (req, res) => {
 app.get("/applications/my-applications", verifyToken, async (req, res) => {
   const result = await applicationsCollection
     .find({ studentEmail: req.user.email })
-    .sort({ appiedAt: -1 })
+    .sort({ appliedAt: -1 })
     .toArray();
+  res.send(result);
+});
+
+// Student cancel/delete pending application
+app.delete("/applications/:id", verifyToken, verifyStudent, async (req, res) => {
+  const id = req.params.id;
+  const result = await applicationsCollection.deleteOne({
+    _id: new ObjectId(id),
+    studentEmail: req.user.email,
+    status: "pending",
+  });
   res.send(result);
 }); 
 
