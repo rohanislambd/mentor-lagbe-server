@@ -219,7 +219,7 @@ app.patch(
   async (req, res) => {
     const id = req.params.id;
     const { approvalStatus } = req.body;
-    // console.log(approvalStatus);
+   
     const result = await tuitionsCollection.updateOne(
       { _id: new ObjectId(id) },
       { $set: { approvalStatus } },
@@ -472,7 +472,6 @@ app.post("/payments/create-checkout-session", verifyToken, async (req, res) => {
   const planName =
     req.user.role === "tutor" ? "Pro Tutor Plan" : "Pro Student Plan";
 
-  console.log("Amount:", amount);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -612,6 +611,16 @@ app.get("/admin/stats", verifyToken, verifyAdmin, async(req, res)=> {
   });
 
 
+})
+
+// total tutor and student count
+app.get("/home/totaluser",verifyToken, async(req, res) => {
+  const totalTutors = await usersCollection.countDocuments({role: "tutor"});
+  const totalStudents = await usersCollection.countDocuments({role: "student"});
+  res.send({
+    totalTutors,
+    totalStudents
+  })
 })
 
 
