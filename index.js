@@ -110,7 +110,19 @@ app.get("/", (req, res) => {
 // tuitions related api
 app.post("/tuitions", verifyToken, verifyTutor, async (req, res) => {
   const tuition = req.body;
-  const userPlan = req.user.plan;
+
+const user = await usersCollection.findOne({
+    email: req.user.email,
+})
+if (!user) {
+  return res.status(404).send({
+    success: false,
+    message: "User not found",
+  });
+}
+
+
+const userPlan = user.plan;
 
   if (userPlan === "free") {
     const tuitionCount = await tuitionsCollection.countDocuments({
@@ -405,7 +417,25 @@ app.patch(
 
 // get logged in user info
 app.get("/users/me", verifyToken, async (req, res) => {
-  res.send(req.user);
+  try {
+    const user = await usersCollection.findOne({
+      email: req.user.email,
+    });
+
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.send(user);
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Failed to fetch user",
+    });
+  }
 });
 
 // update profile (student, tutor, admin) api
