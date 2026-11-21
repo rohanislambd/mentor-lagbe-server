@@ -582,6 +582,39 @@ app.post("/payments/checkout-verify", verifyToken, async (req, res) => {
   res.send({ success: false, message: "Payment verification failed" });
 });
 
+// Admin: View All Payment History
+app.get("/payments", verifyToken, verifyAdmin, async(req, res) => {
+  const result = await paymentsCollection.find({}).sort({paidAt: -1 }).toArray()
+  res.send(result)
+})
+
+// admin overview Stats
+app.get("/admin/stats", verifyToken, verifyAdmin, async(req, res)=> {
+  const totalUsers = await usersCollection.countDocuments();
+  const totalTutors = await usersCollection.countDocuments({role: "tutor"});
+  const totalStudents = await usersCollection.countDocuments({role: "student"});
+  const pendingTuitions = await tuitionsCollection.countDocuments({ approvalStatus: "pending"});
+  const approvedTuitions = await  tuitionsCollection.countDocuments({
+    approvalStatus: "approved"
+  });
+
+  const paidPayments = await  paymentsCollection.find({ paymentStatus: "paid" }).toArray();
+
+  const totalRevenue = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  res.send({
+    totalUsers,
+    totalTutors,
+    totalStudents,
+    pendingTuitions,
+    approvedTuitions,
+    totalRevenue,
+  });
+
+
+})
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
